@@ -1,11 +1,23 @@
 <div
-x-data="{height:0,conversationElement:document.getElementById('conversation')}"
+x-data="{
+    height:0,
+    conversationElement:document.getElementById('conversation'),
+    markAsRead:null
+}"
 x-init  = "
             height = conversationElement.scrollHeight;
             $nextTick(() => conversationElement.scrollTop = height)
+
+            Echo.private('users.{{ Auth()->User()->id }}')
+            .notification((notification) => {
+                if(notification['type'] == 'App\\Notifications\\MessageRead' && notification['conversation_id'] == {{ $this->selectedConversation->id }})
+                {
+                    markAsRead=true;
+                }
+            });
             "
 
-@scroll-bottom.window = " $nextTick(() => conversationElement.scrollTop = height)"
+@scroll-bottom.window = " $nextTick(() => conversationElement.scrollTop = conversationElement.scrollHeight)"
 
 class="w-full overflow-hidden">
 
@@ -37,7 +49,27 @@ class="w-full overflow-hidden">
         </header>
 
         {{-- body --}}
-        <main id="conversation" class="flex flex-col gap-3 p-2.5 overflow-y-auto flex-grow overscroll-contain overflow-x-hidden w-full my-auto">
+        <main
+        @scroll="
+        scropTop = $el.scrollTop;
+
+        if(scropTop<=0){
+
+            window.Livewire.dispatch('loadMore');
+
+        }
+
+        "
+
+        @update-chat-height.window="
+            newHeight = $el.scrollHeight;
+
+            oldHeight = height;
+            $el.scrollTop = newHeight - oldHeight;
+
+            height = newHeight;
+        "
+        id="conversation" class="flex flex-col gap-3 p-2.5 overflow-y-auto flex-grow overscroll-contain overflow-x-hidden w-full my-auto">
 
             @if($loadedMessages)
 
@@ -56,7 +88,9 @@ class="w-full overflow-hidden">
 
             @endif
 
-            <div @class([
+            <div
+            wire:key="{{ time().$key }}"
+            @class([
                 'max-w-[85%] md:max-w-[78%] flex w-auto gap-2 relative mt-2',
                 'ml-auto' => $message->sender_id === auth()->id(),
             ])>
@@ -100,12 +134,10 @@ class="w-full overflow-hidden">
 
                     @if ($message->sender_id === auth()->id())
 
-                        <div>
-
-                            @if ($message->isRead())
+                        <div x-data="{markAsRead:@json($message->isRead())}">
 
                                 {{-- double ticks --}}
-                                <span @class('text-gray-200')>
+                                <span x-cloak x-show="markAsRead" @class('text-gray-200')>
 
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-all" viewBox="0 0 16 16">
                                         <path d="M8.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L2.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093L8.95 4.992a.252.252 0 0 1 .02-.022zm-.92 5.14.92.92a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 1 0-1.091-1.028L9.477 9.417l-.485-.486-.943 1.179z"/>
@@ -113,18 +145,14 @@ class="w-full overflow-hidden">
 
                                 </span>
 
-                            @else
-
                                 {{-- single ticks --}}
-                                <span @class('text-gray-500')>
+                                <span x-show="!markAsRead" @class('text-gray-500')>
 
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
                                         <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
                                     </svg>
 
                                 </span>
-
-                            @endif
 
                         </div>
 

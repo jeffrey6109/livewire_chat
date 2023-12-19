@@ -9,8 +9,17 @@
             {
                 conversationElement.scrollIntoView({'behavior':'smooth'})
             }
-        }),200; 
+        }),200;
+
+        Echo.private('users.{{ Auth()->User()->id }}')
+        .notification((notification) => {
+            if(notification['type'] == 'App\\Notifications\\MessageRead' || notification['type'] == 'App\\Notifications\\MessageSent')
+            {
+                window.Livewire.dispatch('refresh');
+            }
+        });
     "
+    wire:poll.1s
 class="flex flex-col transition-all h-full overflow-hidden">
 
     <header class="px-3 z-10 bg-white sticky top-0 w-full py-2">
@@ -74,27 +83,42 @@ class="flex flex-col transition-all h-full overflow-hidden">
 
                                 {{-- Message Body --}}
                                 <div class="flex gap-x-2 items-center">
-                                    {{-- double tick --}}
-                                    <span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
-                                            <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0l7-7zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0z"/>
-                                            <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/>
-                                        </svg>
-                                    </span>
 
-                                    {{-- single tick --}}
-                                    {{-- <span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
-                                            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-                                        </svg>
-                                    </span> --}}
+                                    @if ($conversation->messages?->last()?->sender_id == auth()->id())
+
+                                        @if ($conversation->isLastMessageReadByUser())
+
+                                            {{-- double tick --}}
+                                            <span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
+                                                    <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0l7-7zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0z"/>
+                                                    <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/>
+                                                </svg>
+                                            </span>
+
+                                        @else
+
+                                            {{-- single tick --}}
+                                            <span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                                </svg>
+                                            </span>
+
+                                        @endif
+
+                                    @endif
 
                                     <p class="grow truncate text-sm font-[100]">
-                                        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ad aliquid animi architecto atque
+                                        {{ $conversation->messages?->last()?->body??' ' }}
                                     </p>
 
                                     {{-- unread count --}}
-                                    <span class="font-bold p-px px-2 text-xs shrink-0 rounded-full bg-blue-500 text-white">5</span>
+                                    @if ($conversation->unreadMessagesCount() > 0)
+                                        <span class="font-bold p-px px-2 text-xs shrink-0 rounded-full bg-blue-500 text-white">
+                                            {{ $conversation->unreadMessagesCount() }}
+                                        </span>
+                                    @endif
                                 </div>
 
                             </a>
@@ -133,8 +157,8 @@ class="flex flex-col transition-all h-full overflow-hidden">
                                             </button>
 
                                             <button
-                                            {{-- onclick="confirm('Are you sure?')||event.stopImmediatePropagation()"
-                                            wire:click="deleteByUser('{{encrypt($conversation->id)}}')" --}}
+                                            onclick="confirm('Are you sure?')||event.stopImmediatePropagation()"
+                                            wire:click="deleteByUser('{{encrypt($conversation->id)}}')"
                                             class="items-center gap-3 flex w-full px-4 py-2 text-left text-sm leading-5 text-gray-500 hover:bg-gray-100 transition-all duration-150 ease-in-out focus:outline-none focus:bg-gray-100">
 
                                                 <span>
